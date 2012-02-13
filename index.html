@@ -56,9 +56,20 @@ body {
 
 #dialogue {
   font-family: "Comic Sans MS";
+  font-size: 40px;
   float: right;
   width: 700px;
   padding-top: 10px;
+  padding-right: 10px;
+}
+
+.spotlight {
+  position: absolute;
+  border: 3px solid blue;
+  z-index: 10000;
+  -moz-box-sizing:    border-box;
+  -webkit-box-sizing: border-box;
+   box-sizing:        border-box;
 }
 </style>
 <div id="instructions">
@@ -96,18 +107,23 @@ onhashchange = function() {
   scheduleSectionInterrupt = function() {
     sectionInterrupted = true;
   };
-  var deferred = scriptSections[section].execute();
+  var command = scriptSections[section];
+  console.log("playing command " + command.role);
+  var deferred = command.play();
   deferred.done(function() {
     if (sectionInterrupted) {
       sectionInProgress = false;
       onhashchange();
       return;
     }
+    var duration = DEFAULT_DURATION_MS;
+    if (typeof(command.pauseAfter) == "number")
+      duration = command.pauseAfter;
     var timeout = setTimeout(function() {
       sectionInProgress = false;
       if (section+1 < scriptSections.length)
         window.location.hash = "#" + (section+1);
-    }, DEFAULT_DURATION_MS);
+    }, duration);
     scheduleSectionInterrupt = function() {
       clearTimeout(timeout);
       sectionInProgress = false;
@@ -121,15 +137,21 @@ function startPlayingScript(html) {
   div.html(html);
   div.find("section").each(function() {
     var role = $(this).attr("data-role");
-    scriptSections.push(Commands[role]($(this)));
+    var command = Commands[role]($(this));
+    command.role = role;
+    console.log("adding command " + role);
+    scriptSections.push(command);
   });
   onhashchange();
 }
 
 var Commands = {
-  dialogue: function DialogueCommand(section) {
+  dialogue: function(section) {
+    var duration = parseInt($(section).attr("data-duration"));
+    if (isNaN(duration))
+      duration = null;
     return {
-      execute: function() {
+      play: function() {
         var deferred = new jQuery.Deferred();
         $("#dialogue").fadeOut(function() {
           $(this).html(section.html()).fadeIn(function() {
@@ -137,7 +159,96 @@ var Commands = {
           });
         });
         return deferred;
+      },
+      pauseAfter: duration
+    };
+  },
+  moveto: function(section) {
+    return {
+      play: function() {
+        var deferred = jQuery.Deferred();
+        var position = section.attr("data-position");
+        var search = section.text();
+        deferred.resolve();
+        if (search.length) {
+          var cursor = editor.getSearchCursor(search);
+          cursor.findNext();
+          if (position == "beginning") {
+            editor.setCursor(cursor.from());
+          } else if (position == "end") {
+            editor.setCursor(cursor.to());
+          }
+          return deferred;
+        }
+        if (position == "beginning") {
+          editor.setCursor(0, 0);
+        } else if (position == "end") {
+          editor.setCursor(9999999999, 999999999999);
+        }
+        return deferred;
+      },
+      pauseAfter: 0
+    };
+  },
+  clear: function(section) {
+    return {
+      play: function() {
+        editor.setValue("");
+        var deferred = jQuery.Deferred();
+        deferred.resolve();
+        return deferred;
+      },
+      pauseAfter: 0
+    }
+  },
+  typechars: function(section) {
+    return {
+      play: function() {
+        editor.focus();
+        var characters = section.text();
+        var deferred = jQuery.Deferred();
+        var array = [];
+        for (var i = 0; i < characters.length; i++)
+          array.push(characters.charAt(i));
+        array.reverse();
+        var interval = setInterval(function() {
+          if (array.length)
+            editor.replaceRange(array.pop(), editor.getCursor());
+            //editor.setValue(editor.getValue() + array.pop());
+          else {
+            clearInterval(interval);
+            deferred.resolve();
+          }
+        }, 500);
+        return deferred;
       }
+    };
+  },
+  spotlight: function(section) {
+    var target = $(section.attr("data-selector"));
+    return {
+      play: function() {
+        var bounds = target[0].getBoundingClientRect();
+        var spotlight = $('<div class="spotlight"></div>');
+        spotlight.css({
+          top: bounds.top + 'px',
+          left: bounds.left + 'px',
+          width: bounds.width + 'px',
+          height: bounds.height + 'px'
+        });
+        $(document.documentElement).append(spotlight);
+        var deferred = jQuery.Deferred();
+        spotlight.hide().fadeIn("slow", function() {
+          setTimeout(function() {
+            spotlight.fadeOut("slow", function() {
+              spotlight.remove();
+              deferred.resolve();
+            });
+          }, 3000);
+        });
+        return deferred;
+      },
+      pauseAfter: 0
     };
   }
 }
@@ -176,8 +287,10 @@ function initEditor() {
   updatePreview();
 }
 
+var scriptHtmlLoad = jQuery.get("script.html");
+
 $(window).load(function() {
-  jQuery.get("script.html", function(html) {
+  scriptHtmlLoad.done(function(html) {
     initEditor();
     startPlayingScript(html);
   });
