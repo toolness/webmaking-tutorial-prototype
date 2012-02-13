@@ -53,8 +53,18 @@ body {
   padding-bottom: 10px;
   padding-left: 10px;
 }
+
+#dialogue {
+  font-family: "Comic Sans MS";
+  float: right;
+  width: 700px;
+  padding-top: 10px;
+}
 </style>
-<div id="instructions"><img id="mascot" src="lovebomb-person.svg"></div>
+<div id="instructions">
+  <img id="mascot" src="lovebomb-person.svg">
+  <div id="dialogue"></div>
+</div>
 <div id="editor"></div><iframe id="preview"></iframe>
 <script src="jquery.min.js"></script>
 <script src="codemirror2/lib/codemirror.js"></script>
@@ -63,12 +73,79 @@ body {
 <script src="codemirror2/mode/css/css.js"></script>
 <script src="codemirror2/mode/htmlmixed/htmlmixed.js"></script>
 <script>
-$(window).load(function() {
+var DEFAULT_DURATION_MS = 3000;
+var nextUpdateIsSilent = false;
+var nextUpdateIsInstant = false;
+var scriptSections = [];
+var sectionInProgress = false;
+var scheduleSectionInterrupt = null;
+var editor;
+
+onhashchange = function() {
+  if (sectionInProgress) {
+    scheduleSectionInterrupt();
+    return;
+  }
+  var section = parseInt(window.location.hash.slice(1));
+  if (isNaN(section) || section < 0)
+    section = 0;
+  if (section >= scriptSections.length)
+    section = scriptSections.length - 1;
+  sectionInProgress = true;
+  var sectionInterrupted = false;
+  scheduleSectionInterrupt = function() {
+    sectionInterrupted = true;
+  };
+  var deferred = scriptSections[section].execute();
+  deferred.done(function() {
+    if (sectionInterrupted) {
+      sectionInProgress = false;
+      onhashchange();
+      return;
+    }
+    var timeout = setTimeout(function() {
+      sectionInProgress = false;
+      if (section+1 < scriptSections.length)
+        window.location.hash = "#" + (section+1);
+    }, DEFAULT_DURATION_MS);
+    scheduleSectionInterrupt = function() {
+      clearTimeout(timeout);
+      sectionInProgress = false;
+      onhashchange();
+    }
+  });
+}
+
+function startPlayingScript(html) {
+  var div = $("<div></div>");
+  div.html(html);
+  div.find("section").each(function() {
+    var role = $(this).attr("data-role");
+    scriptSections.push(Commands[role]($(this)));
+  });
+  onhashchange();
+}
+
+var Commands = {
+  dialogue: function DialogueCommand(section) {
+    return {
+      execute: function() {
+        var deferred = new jQuery.Deferred();
+        $("#dialogue").fadeOut(function() {
+          $(this).html(section.html()).fadeIn(function() {
+            deferred.resolve();
+          });
+        });
+        return deferred;
+      }
+    };
+  }
+}
+
+function initEditor() {
   var DELAY_MS = 300;
-  var nextUpdateIsSilent = false;
-  var nextUpdateIsInstant = false;
   var delay = null;
-  var editor = CodeMirror(function(element) {
+  editor = CodeMirror(function(element) {
     $("#editor").append(element);
   }, {
     mode: "text/html",
@@ -96,7 +173,13 @@ $(window).load(function() {
     previewDocument.write(editor.getValue());
     previewDocument.close();
   }
-  
   updatePreview();
+}
+
+$(window).load(function() {
+  jQuery.get("script.html", function(html) {
+    initEditor();
+    startPlayingScript(html);
+  });
 });
 </script>
