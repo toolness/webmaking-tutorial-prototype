@@ -71,12 +71,24 @@ body {
   -webkit-box-sizing: border-box;
    box-sizing:        border-box;
 }
+
+#timestamp {
+  font-family: Monaco, "Lucida Console", monospace;
+  font-size: small;
+  position: fixed;
+  color: white;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 4px;
+  bottom: 0px;
+  right: 0px;
+}
 </style>
 <div id="instructions">
   <img id="mascot" src="lovebomb-person.svg">
   <div id="dialogue"></div>
 </div>
 <div id="editor"></div><iframe id="preview"></iframe>
+<div id="timestamp"></div>
 <script src="jquery.min.js"></script>
 <script src="codemirror2/lib/codemirror.js"></script>
 <script src="codemirror2/mode/xml/xml.js"></script>
@@ -161,6 +173,7 @@ function startPlayingScript(html) {
       this.currentTime = this.duration;
       this.pause();
     }
+    $("#timestamp").text(this.currentTime.toFixed(1).toString() + 's');
   });
   pop = Popcorn(media);
   div.html(html);
