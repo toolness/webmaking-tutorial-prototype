@@ -83,93 +83,66 @@ body {
 <script src="codemirror2/mode/javascript/javascript.js"></script>
 <script src="codemirror2/mode/css/css.js"></script>
 <script src="codemirror2/mode/htmlmixed/htmlmixed.js"></script>
+<script src="popcorn.js"></script>
+<script src="popcorn.baseplayer.js"></script>
 <script>
-var DEFAULT_DURATION_MS = 3000;
 var nextUpdateIsSilent = false;
 var nextUpdateIsInstant = false;
-var scriptSections = [];
-var sectionInProgress = false;
-var scheduleSectionInterrupt = null;
 var editor;
+var pop;
 
-onhashchange = function() {
-  if (sectionInProgress) {
-    scheduleSectionInterrupt();
-    return;
-  }
-  var section = parseInt(window.location.hash.slice(1));
-  if (isNaN(section) || section < 0)
-    section = 0;
-  if (section >= scriptSections.length)
-    section = scriptSections.length - 1;
-  sectionInProgress = true;
-  var sectionInterrupted = false;
-  scheduleSectionInterrupt = function() {
-    sectionInterrupted = true;
+Popcorn.plugin("simplecode", function(options, f) {
+  return {
+    start: function(event, options) {
+      if (options.onStart)
+        options.onStart();
+    },
+    end: function(event, options) {
+      if (options.onEnd)
+        options.onEnd();
+    }
   };
-  var command = scriptSections[section];
-  console.log("playing command " + command.role);
-  var deferred = command.play();
-  deferred.done(function() {
-    if (sectionInterrupted) {
-      sectionInProgress = false;
-      onhashchange();
-      return;
-    }
-    var duration = DEFAULT_DURATION_MS;
-    if (typeof(command.pauseAfter) == "number")
-      duration = command.pauseAfter;
-    var timeout = setTimeout(function() {
-      sectionInProgress = false;
-      if (section+1 < scriptSections.length)
-        window.location.hash = "#" + (section+1);
-    }, duration);
-    scheduleSectionInterrupt = function() {
-      clearTimeout(timeout);
-      sectionInProgress = false;
-      onhashchange();
-    }
-  });
-}
+});
 
 function startPlayingScript(html) {
+  var media = new Popcorn.baseplayer();
   var div = $("<div></div>");
+  pop = Popcorn(media);
   div.html(html);
   div.find("section").each(function() {
     var role = $(this).attr("data-role");
-    var command = Commands[role]($(this));
-    command.role = role;
-    console.log("adding command " + role);
-    scriptSections.push(command);
+    Commands[role]($(this), pop);
+    console.log("added " + role + ", duration is at ", media.duration);
   });
-  onhashchange();
+  media.readyState = 4;
+  media.play();
 }
 
 var Commands = {
-  dialogue: function(section) {
+  dialogue: function(section, pop) {
+    var DEFAULT_DURATION = 3;
     var duration = parseInt($(section).attr("data-duration"));
     if (isNaN(duration))
-      duration = null;
-    return {
-      play: function() {
-        var deferred = new jQuery.Deferred();
-        $("#dialogue").fadeOut(function() {
-          $(this).html(section.html()).fadeIn(function() {
-            deferred.resolve();
-          });
-        });
-        return deferred;
-      },
-      pauseAfter: duration
-    };
+      duration = DEFAULT_DURATION;
+    if (duration == 0)
+      duration = 0.05;
+    pop.simplecode({
+      start: pop.media.duration,
+      end: pop.media.duration + duration,
+      onStart: function() {
+        $("#dialogue").html(section.html());
+      }
+    });
+    pop.media.duration += duration;
   },
-  moveto: function(section) {
-    return {
-      play: function() {
-        var deferred = jQuery.Deferred();
-        var position = section.attr("data-position");
-        var search = section.text();
-        deferred.resolve();
+  moveto: function(section, pop) {
+    var position = section.attr("data-position");
+    var search = section.text();
+    var duration = 0.1;
+    pop.simplecode({
+      start: pop.media.duration,
+      end: pop.media.duration + duration,
+      onStart: function() {
         if (search.length) {
           var cursor = editor.getSearchCursor(search);
           cursor.findNext();
@@ -178,56 +151,45 @@ var Commands = {
           } else if (position == "end") {
             editor.setCursor(cursor.to());
           }
-          return deferred;
+          return;
         }
         if (position == "beginning") {
           editor.setCursor(0, 0);
         } else if (position == "end") {
           editor.setCursor(9999999999, 999999999999);
         }
-        return deferred;
-      },
-      pauseAfter: 0
-    };
+      }
+    });
+    pop.media.duration += duration;
   },
   clear: function(section) {
-    return {
-      play: function() {
-        editor.setValue("");
-        var deferred = jQuery.Deferred();
-        deferred.resolve();
-        return deferred;
-      },
-      pauseAfter: 0
-    }
+    
   },
-  typechars: function(section) {
-    return {
-      play: function() {
-        editor.focus();
-        var characters = section.text();
-        var deferred = jQuery.Deferred();
-        var array = [];
-        for (var i = 0; i < characters.length; i++)
-          array.push(characters.charAt(i));
-        array.reverse();
-        var interval = setInterval(function() {
-          if (array.length)
-            editor.replaceRange(array.pop(), editor.getCursor());
-            //editor.setValue(editor.getValue() + array.pop());
-          else {
-            clearInterval(interval);
-            deferred.resolve();
-          }
-        }, 500);
-        return deferred;
-      }
-    };
+  typechars: function(section, pop) {
+    var characters = section.text();
+    var array = [];
+    for (var i = 0; i < characters.length; i++)
+      array.push(characters.charAt(i));
+    array.forEach(function(character) {
+      var duration = 0.25;
+      pop.simplecode({
+        start: pop.media.duration,
+        end: pop.media.duration + duration,
+        onStart: function() {
+          editor.focus();
+          editor.replaceRange(character, editor.getCursor());
+        }
+      });
+      pop.media.duration += duration;    
+    });
   },
-  spotlight: function(section) {
-    var target = $(section.attr("data-selector"));
-    return {
-      play: function() {
+  spotlight: function(section, pop) {
+    var duration = 3;
+    pop.simplecode({
+      start: pop.media.duration,
+      end: pop.media.duration + duration,
+      onStart: function() {
+        var target = $(section.attr("data-selector"));
         var bounds = target[0].getBoundingClientRect();
         var spotlight = $('<div class="spotlight"></div>');
         spotlight.css({
@@ -237,19 +199,14 @@ var Commands = {
           height: bounds.height + 'px'
         });
         $(document.documentElement).append(spotlight);
-        var deferred = jQuery.Deferred();
-        spotlight.hide().fadeIn("slow", function() {
-          setTimeout(function() {
-            spotlight.fadeOut("slow", function() {
-              spotlight.remove();
-              deferred.resolve();
-            });
-          }, 3000);
-        });
-        return deferred;
+        this._spotlight = spotlight;
       },
-      pauseAfter: 0
-    };
+      onEnd: function() {
+        $(this._spotlight).remove();
+        this._spotlight = null;
+      }
+    });
+    pop.media.duration += duration;    
   }
 }
 
