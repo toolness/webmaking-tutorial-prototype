@@ -107,6 +107,7 @@ Popcorn.plugin("simplecode", function(options, f) {
 Popcorn.p.extendTimeline = function(options) {
   options.start = this.media.duration;
   options.end = this.media.duration + options.duration;
+  options.role = this.currentRole;
   this.simplecode(options);
   this.media.duration += options.duration;
 };
@@ -118,7 +119,9 @@ function startPlayingScript(html) {
   div.html(html);
   div.find("section").each(function() {
     var role = $(this).attr("data-role");
+    pop.currentRole = role;
     Commands[role]($(this), pop);
+    delete pop.currentRole;
     console.log("added " + role + ", duration is at ", media.duration);
   });
   media.readyState = 4;
@@ -198,7 +201,7 @@ var Commands = {
       },
       onEnd: function() {
         $(this._spotlight).remove();
-        this._spotlight = null;
+        delete this._spotlight;
       }
     });
   }
