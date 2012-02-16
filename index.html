@@ -99,11 +99,11 @@ Popcorn.plugin("simplecode", function(options, f) {
       var futureEvents = events.slice(myIndex+1);
       var pastEvents = events.slice(0, myIndex);
       futureEvents.reverse().forEach(function(event) {
-        if (event.executed && event.undo)
+        if (event.isUndoable && event.executed)
           event.undo();
       });
       pastEvents.forEach(function(event) {
-        if (!event.executed && event.undo)
+        if (event.isUndoable && !event.executed)
           event.onStart();
       });
       if (options.onStart)
@@ -123,6 +123,27 @@ Popcorn.p.extendTimeline = function(options) {
   this.simplecode(options);
   this.media.duration += options.duration;
 };
+
+function undoable(options) {
+  var onStart = options.onStart;
+  var undo = options.undo;
+
+  options.isUndoable = true;
+  options.executed = false;
+  options.onStart = function() {
+    if (!this.executed) {
+      this.executed = true;
+      onStart.call(this);
+    }
+  };
+  options.undo = function() {
+    if (this.executed) {
+      this.executed = false;
+      undo.call(this);
+    }
+  };
+  return options;
+}
 
 function startPlayingScript(html) {
   var media = new Popcorn.baseplayer();
@@ -162,11 +183,10 @@ var Commands = {
   moveto: function(section, pop) {
     var position = section.attr("data-position");
     var search = section.text();
-    pop.extendTimeline({
+    pop.extendTimeline(undoable({
       duration: 0.1,
       onStart: function() {
-        if (search.length && !this.executed) {
-          this.executed = true;
+        if (search.length) {
           this._oldCursor = editor.getCursor();
           var cursor = editor.getSearchCursor(search);
           cursor.findNext();
@@ -183,14 +203,10 @@ var Commands = {
           editor.setCursor(9999999999, 999999999999);
         }
       },
-      executed: false,
       undo: function() {
-        if (this.executed) {
-          this.executed = false;
-          editor.setCursor(this._oldCursor);
-        }
+        editor.setCursor(this._oldCursor);
       }
-    });
+    }));
   },
   typechars: function(section, pop) {
     var characters = section.text();
@@ -198,24 +214,17 @@ var Commands = {
     for (var i = 0; i < characters.length; i++)
       array.push(characters.charAt(i));
     array.forEach(function(character) {
-      pop.extendTimeline({
+      pop.extendTimeline(undoable({
         duration: 0.4,
         onStart: function() {
-          if (!this.executed) {
-            this.executed = true;
-            this._oldCursor = editor.getCursor();
-            editor.focus();
-            editor.replaceRange(character, editor.getCursor());
-          }
+          this._oldCursor = editor.getCursor();
+          editor.focus();
+          editor.replaceRange(character, editor.getCursor());
         },
-        executed: false,
         undo: function() {
-          if (this.executed) {
-            this.executed = false;
-            editor.replaceRange("", this._oldCursor, editor.getCursor());
-          }
+          editor.replaceRange("", this._oldCursor, editor.getCursor());
         }
-      });
+      }));
     });
   },
   spotlight: function(section, pop) {
