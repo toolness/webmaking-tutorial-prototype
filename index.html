@@ -127,6 +127,12 @@ Popcorn.p.extendTimeline = function(options) {
 function startPlayingScript(html) {
   var media = new Popcorn.baseplayer();
   var div = $("<div></div>");
+  media.addEventListener("timeupdate", function() {
+    if (this.currentTime >= this.duration) {
+      this.currentTime = this.duration;
+      this.pause();
+    }
+  });
   pop = Popcorn(media);
   div.html(html);
   div.find("section").each(function() {
