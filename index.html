@@ -94,6 +94,18 @@ var pop;
 Popcorn.plugin("simplecode", function(options, f) {
   return {
     start: function(event, options) {
+      var myIndex = this.data.trackEvents.byStart.indexOf(options);
+      var events = this.data.trackEvents.byStart;
+      var futureEvents = events.slice(myIndex+1);
+      var pastEvents = events.slice(0, myIndex);
+      futureEvents.reverse().forEach(function(event) {
+        if (event.executed && event.undo)
+          event.undo();
+      });
+      pastEvents.forEach(function(event) {
+        if (!event.executed && event.undo)
+          event.onStart();
+      });
       if (options.onStart)
         options.onStart();
     },
@@ -147,7 +159,9 @@ var Commands = {
     pop.extendTimeline({
       duration: 0.1,
       onStart: function() {
-        if (search.length) {
+        if (search.length && !this.executed) {
+          this.executed = true;
+          this._oldCursor = editor.getCursor();
           var cursor = editor.getSearchCursor(search);
           cursor.findNext();
           if (position == "beginning") {
@@ -162,6 +176,13 @@ var Commands = {
         } else if (position == "end") {
           editor.setCursor(9999999999, 999999999999);
         }
+      },
+      executed: false,
+      undo: function() {
+        if (this.executed) {
+          this.executed = false;
+          editor.setCursor(this._oldCursor);
+        }
       }
     });
   },
@@ -175,10 +196,21 @@ var Commands = {
       array.push(characters.charAt(i));
     array.forEach(function(character) {
       pop.extendTimeline({
-        duration: 0.25,
+        duration: 0.4,
         onStart: function() {
-          editor.focus();
-          editor.replaceRange(character, editor.getCursor());
+          if (!this.executed) {
+            this.executed = true;
+            this._oldCursor = editor.getCursor();
+            editor.focus();
+            editor.replaceRange(character, editor.getCursor());
+          }
+        },
+        executed: false,
+        undo: function() {
+          if (this.executed) {
+            this.executed = false;
+            editor.replaceRange("", this._oldCursor, editor.getCursor());
+          }
         }
       });
     });
