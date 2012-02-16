@@ -104,6 +104,13 @@ Popcorn.plugin("simplecode", function(options, f) {
   };
 });
 
+Popcorn.p.extendTimeline = function(options) {
+  options.start = this.media.duration;
+  options.end = this.media.duration + options.duration;
+  this.simplecode(options);
+  this.media.duration += options.duration;
+};
+
 function startPlayingScript(html) {
   var media = new Popcorn.baseplayer();
   var div = $("<div></div>");
@@ -124,24 +131,18 @@ var Commands = {
     var duration = parseInt($(section).attr("data-duration"));
     if (isNaN(duration))
       duration = DEFAULT_DURATION;
-    if (duration == 0)
-      duration = 0.05;
-    pop.simplecode({
-      start: pop.media.duration,
-      end: pop.media.duration + duration,
+    pop.extendTimeline({
+      duration: duration || 0.05,
       onStart: function() {
         $("#dialogue").html(section.html());
       }
     });
-    pop.media.duration += duration;
   },
   moveto: function(section, pop) {
     var position = section.attr("data-position");
     var search = section.text();
-    var duration = 0.1;
-    pop.simplecode({
-      start: pop.media.duration,
-      end: pop.media.duration + duration,
+    pop.extendTimeline({
+      duration: 0.1,
       onStart: function() {
         if (search.length) {
           var cursor = editor.getSearchCursor(search);
@@ -160,7 +161,6 @@ var Commands = {
         }
       }
     });
-    pop.media.duration += duration;
   },
   clear: function(section) {
     
@@ -171,23 +171,18 @@ var Commands = {
     for (var i = 0; i < characters.length; i++)
       array.push(characters.charAt(i));
     array.forEach(function(character) {
-      var duration = 0.25;
-      pop.simplecode({
-        start: pop.media.duration,
-        end: pop.media.duration + duration,
+      pop.extendTimeline({
+        duration: 0.25,
         onStart: function() {
           editor.focus();
           editor.replaceRange(character, editor.getCursor());
         }
       });
-      pop.media.duration += duration;    
     });
   },
   spotlight: function(section, pop) {
-    var duration = 3;
-    pop.simplecode({
-      start: pop.media.duration,
-      end: pop.media.duration + duration,
+    pop.extendTimeline({
+      duration: 3,
       onStart: function() {
         var target = $(section.attr("data-selector"));
         var bounds = target[0].getBoundingClientRect();
@@ -206,7 +201,6 @@ var Commands = {
         this._spotlight = null;
       }
     });
-    pop.media.duration += duration;    
   }
 }
 
