@@ -145,6 +145,14 @@ function undoable(options) {
   return options;
 }
 
+onhashchange = function() {
+  var time = parseFloat(window.location.hash.slice(1));
+  if (isNaN(time))
+    time = 0;
+  if (pop)
+    pop.play(time);
+};
+
 function startPlayingScript(html) {
   var media = new Popcorn.baseplayer();
   var div = $("<div></div>");
@@ -164,7 +172,7 @@ function startPlayingScript(html) {
     console.log("added " + role + ", duration is at ", media.duration);
   });
   media.readyState = 4;
-  media.play();
+  onhashchange();
 }
 
 var Commands = {
