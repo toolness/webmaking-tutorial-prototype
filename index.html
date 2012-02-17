@@ -61,6 +61,15 @@ body {
   width: 700px;
   padding-top: 10px;
   padding-right: 10px;
+  -moz-transition: opacity 0.5s;
+  -webkit-transition: opacity 0.5s;
+  -o-transition: opacity 0.5s;
+  -ms-transition: opacity 0.5s;
+  opacity: 0;
+}
+
+#dialogue.visible {
+  opacity: 1;
 }
 
 .spotlight {
@@ -246,6 +255,7 @@ function startPlayingScript(html) {
 
 var Commands = {
   dialogue: {
+    TRANSITION_TIME: 0.5,
     duration: function(section) {
       var duration = section.attrFloat("data-duration", 3);
       return duration || 0.05;
@@ -254,15 +264,16 @@ var Commands = {
       var nextDialogue = section.nextAll('section[data-role="dialogue"]');
       var end = pop.media.duration + 1;
       if (nextDialogue.length)
-        end = nextDialogue.attrFloat("data-start");
+        end = nextDialogue.attrFloat("data-start") - this.TRANSITION_TIME;
       pop.simplecode({
         start: section.attrFloat("data-start"),
         end: end,
         onStart: function() {
           $("#dialogue").html(section.html());
+          $("#dialogue").addClass('visible');
         },
         onEnd: function() {
-          $("#dialogue").html("");
+          $("#dialogue").removeClass('visible');
         }
       });
     }
