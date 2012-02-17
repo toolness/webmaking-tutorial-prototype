@@ -179,17 +179,12 @@ function startPlayingScript(html) {
   pop = Popcorn(media);
   div.html(html);
   div.find("section").each(function() {
-    var role = $(this).attr("data-role");
-    var command = Commands[role];
-    var duration = command.duration($(this));
+    var command = Commands[$(this).attr("data-role")];
+    $(this).data("command", command);
     $(this).attr("data-start", media.duration);
-    media.duration += duration;
-    console.log("added " + role + ", duration is at ", media.duration);
-  });
-  div.find("section").each(function() {
-    var role = $(this).attr("data-role");
-    var command = Commands[role];
-    command.annotate($(this), pop);
+    media.duration += command.duration($(this));
+  }).each(function() {
+    $(this).data("command").annotate($(this), pop);
   });
   media.readyState = 4;
   onhashchange();
