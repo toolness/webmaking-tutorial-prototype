@@ -55,21 +55,31 @@ body {
 }
 
 #dialogue {
-  font-family: "Comic Sans MS";
+  font-family: Georgia, Baskerville;
   font-size: 40px;
   float: right;
   width: 700px;
   padding-top: 10px;
-  padding-right: 10px;
+  padding-left: 20px;
+  padding-right: 20px;
+  color: #404040;
   -moz-transition: opacity 0.5s;
   -webkit-transition: opacity 0.5s;
   -o-transition: opacity 0.5s;
   -ms-transition: opacity 0.5s;
   opacity: 0;
+  -moz-box-sizing:    border-box;
+  -webkit-box-sizing: border-box;
+   box-sizing:        border-box;
 }
 
 #dialogue.visible {
   opacity: 1;
+}
+
+#dialogue code {
+  font-family: Monaco, "Lucida Console", monospace;
+  font-size: smaller;
 }
 
 .spotlight {
