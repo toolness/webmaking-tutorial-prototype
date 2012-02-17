@@ -79,6 +79,15 @@ body {
   -moz-box-sizing:    border-box;
   -webkit-box-sizing: border-box;
    box-sizing:        border-box;
+  -moz-transition: opacity 0.25s;
+  -webkit-transition: opacity 0.25s;
+  -o-transition: opacity 0.25s;
+  -ms-transition: opacity 0.25s;
+  opacity: 0;
+}
+
+.spotlight.visible {
+  opacity: 1;
 }
 
 #player {
@@ -343,14 +352,16 @@ var Commands = {
     }
   },
   spotlight: {
+    TRANSITION_TIME: 0.25,
     duration: function(section) {
       return 3;
     },
     annotate: function(section, pop) {
+      var self = this;
       var start = section.attrFloat("data-start");
       pop.simplecode({
         start: start,
-        end: start + this.duration(section),
+        end: start + this.duration(section) - this.TRANSITION_TIME,
         onStart: function() {
           var target = $(section.attr("data-selector"));
           var bounds = target[0].getBoundingClientRect();
@@ -362,11 +373,16 @@ var Commands = {
             height: bounds.height + 'px'
           });
           $(document.documentElement).append(spotlight);
+          setTimeout(function() { spotlight.addClass("visible"); }, 0);
           this._spotlight = spotlight;
         },
         onEnd: function() {
-          $(this._spotlight).remove();
+          var spotlight = $(this._spotlight);
           delete this._spotlight;
+          spotlight.removeClass("visible");
+          setTimeout(function() {
+            spotlight.remove();
+          }, self.TRANSITION_TIME * 1000);
         }
       });
     }
