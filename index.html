@@ -103,6 +103,15 @@ var nextUpdateIsInstant = false;
 var editor;
 var pop;
 
+jQuery.fn.extend({
+  attrFloat: function(name, defaultValue) {
+    var number = parseFloat(this.attr(name));
+    if (isNaN(number))
+      return defaultValue;
+    return number;
+  }
+});
+
 Popcorn.plugin("simplecode", function(options, f) {
   return {
     start: function(event, options) {
@@ -127,14 +136,6 @@ Popcorn.plugin("simplecode", function(options, f) {
     }
   };
 });
-
-Popcorn.p.extendTimeline = function(options) {
-  options.start = this.media.duration;
-  options.end = this.media.duration + options.duration;
-  options.role = this.currentRole;
-  this.simplecode(options);
-  this.media.duration += options.duration;
-};
 
 function undoable(options) {
   var onStart = options.onStart;
@@ -179,96 +180,136 @@ function startPlayingScript(html) {
   div.html(html);
   div.find("section").each(function() {
     var role = $(this).attr("data-role");
-    pop.currentRole = role;
-    Commands[role]($(this), pop);
-    delete pop.currentRole;
+    var command = Commands[role];
+    var duration = command.duration($(this));
+    $(this).attr("data-start", media.duration);
+    media.duration += duration;
     console.log("added " + role + ", duration is at ", media.duration);
+  });
+  div.find("section").each(function() {
+    var role = $(this).attr("data-role");
+    var command = Commands[role];
+    command.annotate($(this), pop);
   });
   media.readyState = 4;
   onhashchange();
 }
 
 var Commands = {
-  dialogue: function(section, pop) {
-    var DEFAULT_DURATION = 3;
-    var duration = parseInt($(section).attr("data-duration"));
-    if (isNaN(duration))
-      duration = DEFAULT_DURATION;
-    pop.extendTimeline({
-      duration: duration || 0.05,
-      onStart: function() {
-        $("#dialogue").html(section.html());
-      }
-    });
-  },
-  moveto: function(section, pop) {
-    var position = section.attr("data-position");
-    var search = section.text();
-    pop.extendTimeline(undoable({
-      duration: 0.1,
-      onStart: function() {
-        if (search.length) {
-          this._oldCursor = editor.getCursor();
-          var cursor = editor.getSearchCursor(search);
-          cursor.findNext();
-          if (position == "beginning") {
-            editor.setCursor(cursor.from());
-          } else if (position == "end") {
-            editor.setCursor(cursor.to());
-          }
-          return;
-        }
-        if (position == "beginning") {
-          editor.setCursor(0, 0);
-        } else if (position == "end") {
-          editor.setCursor(9999999999, 999999999999);
-        }
-      },
-      undo: function() {
-        editor.setCursor(this._oldCursor);
-      }
-    }));
-  },
-  typechars: function(section, pop) {
-    var characters = section.text();
-    var array = [];
-    for (var i = 0; i < characters.length; i++)
-      array.push(characters.charAt(i));
-    array.forEach(function(character) {
-      pop.extendTimeline(undoable({
-        duration: 0.4,
+  dialogue: {
+    duration: function(section) {
+      var duration = section.attrFloat("data-duration", 3);
+      return duration || 0.05;
+    },
+    annotate: function(section, pop) {
+      var nextDialogue = section.nextAll('section[data-role="dialogue"]');
+      var end = pop.media.duration + 1;
+      if (nextDialogue.length)
+        end = nextDialogue.attrFloat("data-start");
+      pop.simplecode({
+        start: section.attrFloat("data-start"),
+        end: end,
         onStart: function() {
-          this._oldCursor = editor.getCursor();
-          editor.focus();
-          editor.replaceRange(character, editor.getCursor());
+          $("#dialogue").html(section.html());
+        },
+        onEnd: function() {
+          $("#dialogue").html("");
+        }
+      });
+    }
+  },
+  moveto: {
+    duration: function(section) {
+      return 0.1;
+    },
+    annotate: function(section, pop) {
+      var position = section.attr("data-position");
+      var search = section.text();
+      var start = section.attrFloat("data-start");
+      pop.simplecode(undoable({
+        start: start,
+        end: start + this.duration(section),
+        onStart: function() {
+          if (search.length) {
+            this._oldCursor = editor.getCursor();
+            var cursor = editor.getSearchCursor(search);
+            cursor.findNext();
+            if (position == "beginning") {
+              editor.setCursor(cursor.from());
+            } else if (position == "end") {
+              editor.setCursor(cursor.to());
+            }
+            return;
+          }
+          if (position == "beginning") {
+            editor.setCursor(0, 0);
+          } else if (position == "end") {
+            editor.setCursor(9999999999, 999999999999);
+          }
         },
         undo: function() {
-          editor.replaceRange("", this._oldCursor, editor.getCursor());
+          editor.setCursor(this._oldCursor);
         }
       }));
-    });
+    }
   },
-  spotlight: function(section, pop) {
-    pop.extendTimeline({
-      duration: 3,
-      onStart: function() {
-        var target = $(section.attr("data-selector"));
-        var bounds = target[0].getBoundingClientRect();
-        var spotlight = $('<div class="spotlight"></div>');
-        spotlight.css({
-          top: bounds.top + 'px',
-          left: bounds.left + 'px',
-          width: bounds.width + 'px',
-          height: bounds.height + 'px'
-        });
-        $(document.documentElement).append(spotlight);
-        this._spotlight = spotlight;
-      },
-      onEnd: function() {
-        $(this._spotlight).remove();
-        delete this._spotlight;
-      }
-    });
+  typechars: {
+    DURATION_PER_CHAR: 0.4,
+    duration: function(section) {
+      return section.text().length * this.DURATION_PER_CHAR;
+    },
+    annotate: function(section, pop) {
+      var self = this;
+      var characters = section.text();
+      var array = [];
+      var currentTime = section.attrFloat("data-start");
+      for (var i = 0; i < characters.length; i++)
+        array.push(characters.charAt(i));
+      array.forEach(function(character) {
+        pop.simplecode(undoable({
+          start: currentTime,
+          end: currentTime + self.DURATION_PER_CHAR,
+          onStart: function() {
+            this._oldCursor = editor.getCursor();
+            editor.focus();
+            editor.replaceRange(character, editor.getCursor());
+          },
+          undo: function() {
+            editor.replaceRange("", this._oldCursor, editor.getCursor());
+          }
+        }));
+        currentTime += self.DURATION_PER_CHAR;
+      });
+    }
+  },
+  spotlight: {
+    duration: function(section) {
+      return 3;
+    },
+    annotate: function(section, pop) {
+      var start = section.attrFloat("data-start");
+      pop.simplecode({
+        start: start,
+        end: start + this.duration(section),
+        onStart: function() {
+          var target = $(section.attr("data-selector"));
+          var bounds = target[0].getBoundingClientRect();
+          var spotlight = $('<div class="spotlight"></div>');
+          spotlight.css({
+            top: bounds.top + 'px',
+            left: bounds.left + 'px',
+            width: bounds.width + 'px',
+            height: bounds.height + 'px'
+          });
+          $(document.documentElement).append(spotlight);
+          this._spotlight = spotlight;
+        },
+        onEnd: function() {
+          $(this._spotlight).remove();
+          delete this._spotlight;
+        }
+      });
+    }
   }
 }
 
