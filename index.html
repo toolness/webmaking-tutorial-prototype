@@ -72,9 +72,9 @@ body {
    box-sizing:        border-box;
 }
 
-#timestamp {
+#player {
   font-family: Monaco, "Lucida Console", monospace;
-  font-size: small;
+  font-size: 10px;
   position: fixed;
   color: white;
   background: rgba(0, 0, 0, 0.75);
@@ -82,13 +82,34 @@ body {
   bottom: 0px;
   right: 0px;
 }
+
+#player .scrubber {
+  width: 100px;
+}
+
+#player .timestamp {
+  min-width: 40px;
+}
+
+#player .scrubber .progress {
+  background: rgba(255, 255, 255, 0.8);
+  min-height: 10px;
+  vertical-align: middle;
+}
+
+#player div {
+  display: inline-block;
+}
 </style>
 <div id="instructions">
   <img id="mascot" src="lovebomb-person.svg">
   <div id="dialogue"></div>
 </div>
 <div id="editor"></div><iframe id="preview"></iframe>
-<div id="timestamp"></div>
+<div id="player">
+  <div class="scrubber"><div class="progress"></div></div>
+  <div class="timestamp"></div>
+</div>
 <script src="jquery.min.js"></script>
 <script src="codemirror2/lib/codemirror.js"></script>
 <script src="codemirror2/mode/xml/xml.js"></script>
@@ -166,6 +187,39 @@ onhashchange = function() {
     pop.play(time);
 };
 
+$("#player .scrubber").mousedown(function(event) {
+  var self = $(this);
+
+  function scrub(event) {
+    var baseX = self.offset().left;
+    var width = self.width();
+    var percentage = (event.pageX - baseX) / width;
+    pop.media.currentTime = pop.media.duration * percentage;
+    pop.media.dispatchEvent("timeupdate");
+  }
+  
+  self.bind("mousemove", function(event) {
+    scrub(event);
+  });
+  $(document).one("mouseup", function() {
+    self.unbind("mousemove");
+    pop.play();
+  });
+  
+  pop.pause();
+  scrub(event);
+  return false;
+});
+
+function updatePlayerUI() {
+  var media = pop.media;
+  var percentComplete = (media.currentTime / media.duration) * 100;
+  $("#player .progress").css({
+    width: percentComplete + "%"
+  });
+  $(".timestamp").text(media.currentTime.toFixed(1).toString() + 's');  
+}
+
 function startPlayingScript(html) {
   var media = new Popcorn.baseplayer();
   var div = $("<div></div>");
@@ -174,7 +228,7 @@ function startPlayingScript(html) {
       this.currentTime = this.duration;
       this.pause();
     }
-    $("#timestamp").text(this.currentTime.toFixed(1).toString() + 's');
+    updatePlayerUI();
   });
   pop = Popcorn(media);
   div.html(html);
