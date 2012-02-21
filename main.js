@@ -56,7 +56,10 @@ function undoable(options) {
   return options;
 }
 
-function startPlayingScript(html, commands) {
+function makePlayer() {
+  var media = new Popcorn.baseplayer();
+  var pop = Popcorn(media);
+  
   function updatePlayerUI() {
     var percentComplete = (media.currentTime / media.duration) * 100;
     $("#player .progress").css({
@@ -64,27 +67,6 @@ function startPlayingScript(html, commands) {
     });
     $(".timestamp").text(media.currentTime.toFixed(1).toString() + 's');  
   }
-
-  function parseScript() {
-    var div = $("<div></div>");
-    div.html(html);
-    div.find("section").each(function() {
-      var command = commands[$(this).attr("data-role")];
-      $(this).data("command", command);
-      $(this).attr("data-start", media.duration);
-      media.duration += command.duration($(this));
-    }).each(function() {
-      $(this).data("command").annotate($(this), pop);
-    });
-  }
-
-  $(window).bind("hashchange", function() {
-    var time = parseFloat(window.location.hash.slice(1));
-    if (isNaN(time))
-      time = 0;
-    if (pop)
-      pop.play(time);
-  });
 
   $("#player .scrubber").mousedown(function(event) {
     var self = $(this);
@@ -109,9 +91,6 @@ function startPlayingScript(html, commands) {
     scrub(event);
     return false;
   });
-  
-  var media = new Popcorn.baseplayer();
-  var pop = Popcorn(media);
 
   media.addEventListener("timeupdate", function() {
     if (this.currentTime >= this.duration) {
@@ -121,10 +100,21 @@ function startPlayingScript(html, commands) {
     updatePlayerUI();
   });
 
-  parseScript();
-  media.readyState = 4;
-  $(window).trigger("hashchange");
-  
+  return pop;
+}
+
+function buildMovieFromScript(html, commands, pop) {
+  var div = $("<div></div>");
+  div.html(html);
+  div.find("section").each(function() {
+    var command = commands[$(this).attr("data-role")];
+    $(this).data("command", command);
+    $(this).attr("data-start", pop.media.duration);
+    pop.media.duration += command.duration($(this));
+  }).each(function() {
+    $(this).data("command").annotate($(this), pop);
+  });
+  pop.media.readyState = 4;
   return pop;
 }
 
@@ -307,6 +297,13 @@ $(window).load(function() {
 
     addGeneralMovieCommands(v.commands);
     addEditorMovieCommands(v.commands, v.editor);
-    v.pop = startPlayingScript(html, v.commands);
+    v.pop = buildMovieFromScript(html, v.commands, makePlayer());
+
+    $(window).bind("hashchange", function() {
+      var time = parseFloat(window.location.hash.slice(1));
+      if (isNaN(time))
+        time = 0;
+      v.pop.play(time);
+    }).trigger("hashchange");
   });
 });
