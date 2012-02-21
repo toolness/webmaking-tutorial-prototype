@@ -1,7 +1,5 @@
-var nextUpdateIsSilent = false;
-var nextUpdateIsInstant = false;
-var editor;
-var pop;
+var scriptHtmlLoad = jQuery.get("script.html");
+var debugVars;
 
 jQuery.fn.extend({
   attrFloat: function(name, defaultValue) {
@@ -58,50 +56,63 @@ function undoable(options) {
   return options;
 }
 
-onhashchange = function() {
-  var time = parseFloat(window.location.hash.slice(1));
-  if (isNaN(time))
-    time = 0;
-  if (pop)
-    pop.play(time);
-};
-
-$("#player .scrubber").mousedown(function(event) {
-  var self = $(this);
-
-  function scrub(event) {
-    var baseX = self.offset().left;
-    var width = self.width();
-    var percentage = (event.pageX - baseX) / width;
-    pop.media.currentTime = pop.media.duration * percentage;
-    pop.media.dispatchEvent("timeupdate");
-  }
-  
-  self.bind("mousemove", function(event) {
-    scrub(event);
-  });
-  $(document).one("mouseup", function() {
-    self.unbind("mousemove");
-    pop.play();
-  });
-  
-  pop.pause();
-  scrub(event);
-  return false;
-});
-
-function updatePlayerUI() {
-  var media = pop.media;
-  var percentComplete = (media.currentTime / media.duration) * 100;
-  $("#player .progress").css({
-    width: percentComplete + "%"
-  });
-  $(".timestamp").text(media.currentTime.toFixed(1).toString() + 's');  
-}
-
 function startPlayingScript(html, commands) {
+  function updatePlayerUI() {
+    var percentComplete = (media.currentTime / media.duration) * 100;
+    $("#player .progress").css({
+      width: percentComplete + "%"
+    });
+    $(".timestamp").text(media.currentTime.toFixed(1).toString() + 's');  
+  }
+
+  function parseScript() {
+    var div = $("<div></div>");
+    div.html(html);
+    div.find("section").each(function() {
+      var command = commands[$(this).attr("data-role")];
+      $(this).data("command", command);
+      $(this).attr("data-start", media.duration);
+      media.duration += command.duration($(this));
+    }).each(function() {
+      $(this).data("command").annotate($(this), pop);
+    });
+  }
+
+  $(window).bind("hashchange", function() {
+    var time = parseFloat(window.location.hash.slice(1));
+    if (isNaN(time))
+      time = 0;
+    if (pop)
+      pop.play(time);
+  });
+
+  $("#player .scrubber").mousedown(function(event) {
+    var self = $(this);
+
+    function scrub(event) {
+      var baseX = self.offset().left;
+      var width = self.width();
+      var percentage = (event.pageX - baseX) / width;
+      pop.media.currentTime = pop.media.duration * percentage;
+      pop.media.dispatchEvent("timeupdate");
+    }
+
+    self.bind("mousemove", function(event) {
+      scrub(event);
+    });
+    $(document).one("mouseup", function() {
+      self.unbind("mousemove");
+      pop.play();
+    });
+
+    pop.pause();
+    scrub(event);
+    return false;
+  });
+  
   var media = new Popcorn.baseplayer();
-  var div = $("<div></div>");
+  var pop = Popcorn(media);
+
   media.addEventListener("timeupdate", function() {
     if (this.currentTime >= this.duration) {
       this.currentTime = this.duration;
@@ -109,46 +120,16 @@ function startPlayingScript(html, commands) {
     }
     updatePlayerUI();
   });
-  pop = Popcorn(media);
-  div.html(html);
-  div.find("section").each(function() {
-    var command = commands[$(this).attr("data-role")];
-    $(this).data("command", command);
-    $(this).attr("data-start", media.duration);
-    media.duration += command.duration($(this));
-  }).each(function() {
-    $(this).data("command").annotate($(this), pop);
-  });
+
+  parseScript();
   media.readyState = 4;
-  onhashchange();
+  $(window).trigger("hashchange");
+  
+  return pop;
 }
 
-var Commands = {
-  dialogue: {
-    TRANSITION_TIME: 0.6,
-    duration: function(section) {
-      var duration = section.attrFloat("data-duration", 4);
-      return duration || 0.05;
-    },
-    annotate: function(section, pop) {
-      var nextDialogue = section.nextAll('section[data-role="dialogue"]');
-      var end = pop.media.duration + 1;
-      if (nextDialogue.length)
-        end = nextDialogue.attrFloat("data-start") - this.TRANSITION_TIME;
-      pop.simplecode({
-        start: section.attrFloat("data-start"),
-        end: end,
-        onStart: function() {
-          $("#dialogue").html(section.html());
-          $("#dialogue").addClass('visible');
-        },
-        onEnd: function() {
-          $("#dialogue").removeClass('visible');
-        }
-      });
-    }
-  },
-  moveto: {
+function addEditorMovieCommands(commands, editor) {
+  commands.moveto = {
     duration: function(section) {
       return 0.1;
     },
@@ -182,8 +163,9 @@ var Commands = {
         }
       }));
     }
-  },
-  typechars: {
+  };
+  
+  commands.typechars = {
     DURATION_PER_CHAR: 0.4,
     duration: function(section) {
       return section.text().length * this.DURATION_PER_CHAR;
@@ -211,8 +193,36 @@ var Commands = {
         currentTime += self.DURATION_PER_CHAR;
       });
     }
-  },
-  spotlight: {
+  };
+}
+
+function addGeneralMovieCommands(commands) {
+  commands.dialogue = {
+    TRANSITION_TIME: 0.6,
+    duration: function(section) {
+      var duration = section.attrFloat("data-duration", 4);
+      return duration || 0.05;
+    },
+    annotate: function(section, pop) {
+      var nextDialogue = section.nextAll('section[data-role="dialogue"]');
+      var end = pop.media.duration + 1;
+      if (nextDialogue.length)
+        end = nextDialogue.attrFloat("data-start") - this.TRANSITION_TIME;
+      pop.simplecode({
+        start: section.attrFloat("data-start"),
+        end: end,
+        onStart: function() {
+          $("#dialogue").html(section.html());
+          $("#dialogue").addClass('visible');
+        },
+        onEnd: function() {
+          $("#dialogue").removeClass('visible');
+        }
+      });
+    }
+  };
+  
+  commands.spotlight = {
     TRANSITION_TIME: 0.25,
     duration: function(section) {
       return 3;
@@ -247,13 +257,15 @@ var Commands = {
         }
       });
     }
-  }
+  };
 }
 
 function initEditor() {
+  var nextUpdateIsSilent = false;
+  var nextUpdateIsInstant = false;
   var DELAY_MS = 300;
   var delay = null;
-  editor = CodeMirror(function(element) {
+  var editor = CodeMirror(function(element) {
     $("#editor").append(element);
   }, {
     mode: "text/html",
@@ -282,13 +294,19 @@ function initEditor() {
     previewDocument.close();
   }
   updatePreview();
+  
+  return editor;
 }
-
-var scriptHtmlLoad = jQuery.get("script.html");
 
 $(window).load(function() {
   scriptHtmlLoad.done(function(html) {
-    initEditor();
-    startPlayingScript(html, Commands);
+    var v = debugVars = {
+      editor: initEditor(),
+      commands: {}
+    };
+
+    addGeneralMovieCommands(v.commands);
+    addEditorMovieCommands(v.commands, v.editor);
+    v.pop = startPlayingScript(html, v.commands);
   });
 });
