@@ -1,0 +1,141 @@
+html {
+  background: #303030;
+  height: 100%;
+}
+
+body {
+  width: 900px;
+  height: 100%;
+  background: white;
+  margin: 0 auto;
+}
+
+#editor {
+  display: inline-block;
+  vertical-align: bottom;
+  width: 450px;
+  height: 320px;
+  border-top: 1px solid gray;
+  border-right: 1px solid gray;
+  border-bottom: 1px solid gray;
+  -moz-box-sizing:    border-box;
+  -webkit-box-sizing: border-box;
+   box-sizing:        border-box;
+}
+
+#preview {
+  display: inline-block;
+  vertical-align: bottom;
+  width: 450px;
+  height: 320px;
+  border: none;
+  border-top: 1px solid gray;
+  border-bottom: 1px solid gray;
+  -moz-box-sizing:    border-box;
+  -webkit-box-sizing: border-box;
+   box-sizing:        border-box;
+}
+
+.CodeMirror {
+  width: 100%;
+  height: 100%;
+}
+
+#mascot {
+  height: 200px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  padding-left: 10px;
+}
+
+#dialogue {
+  font-family: Baskerville, Georgia;
+  font-size: 40px;
+  float: right;
+  width: 700px;
+  padding-top: 10px;
+  padding-left: 20px;
+  padding-right: 20px;
+  color: #404040;
+  -moz-transition: opacity 0.5s;
+  -webkit-transition: opacity 0.5s;
+  -o-transition: opacity 0.5s;
+  -ms-transition: opacity 0.5s;
+  opacity: 0;
+  -moz-box-sizing:    border-box;
+  -webkit-box-sizing: border-box;
+   box-sizing:        border-box;
+}
+
+#dialogue.visible {
+  opacity: 1;
+}
+
+#dialogue code {
+  font-family: Monaco, "Lucida Console", monospace;
+  font-size: smaller;
+}
+
+.spotlight {
+  position: absolute;
+  border: 1px solid blue;
+  box-shadow: 0 0 10px blue;
+  z-index: 10000;
+  -moz-box-sizing:    border-box;
+  -webkit-box-sizing: border-box;
+   box-sizing:        border-box;
+  -moz-transition: opacity 0.25s;
+  -webkit-transition: opacity 0.25s;
+  -o-transition: opacity 0.25s;
+  -ms-transition: opacity 0.25s;
+  opacity: 0;
+}
+
+.spotlight.visible {
+  opacity: 1;
+}
+
+#player {
+  font-family: Monaco, "Lucida Console", monospace;
+  font-size: 10px;
+  position: fixed;
+  color: white;
+  background: rgba(0, 0, 0, 0.75);
+  padding: 4px;
+  bottom: 0px;
+  right: 0px;
+  z-index: 20000;
+}
+
+#player .scrubber {
+  width: 100px;
+}
+
+#player .timestamp {
+  min-width: 40px;
+}
+
+#player .scrubber .progress {
+  background: rgba(255, 255, 255, 0.8);
+  min-height: 10px;
+  vertical-align: middle;
+}
+
+#player div {
+  display: inline-block;
+}
+
+.notes {
+  font-family: sans-serif;
+  padding: 10px;
+  color: gray;
+  font-size: small;
+}
+
+.notes a {
+  color: black;
+}
+
+.notes a:hover {
+  background: #f0f0f0;
+}
