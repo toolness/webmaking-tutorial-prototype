@@ -99,7 +99,7 @@ function updatePlayerUI() {
   $(".timestamp").text(media.currentTime.toFixed(1).toString() + 's');  
 }
 
-function startPlayingScript(html) {
+function startPlayingScript(html, commands) {
   var media = new Popcorn.baseplayer();
   var div = $("<div></div>");
   media.addEventListener("timeupdate", function() {
@@ -112,7 +112,7 @@ function startPlayingScript(html) {
   pop = Popcorn(media);
   div.html(html);
   div.find("section").each(function() {
-    var command = Commands[$(this).attr("data-role")];
+    var command = commands[$(this).attr("data-role")];
     $(this).data("command", command);
     $(this).attr("data-start", media.duration);
     media.duration += command.duration($(this));
@@ -289,6 +289,6 @@ var scriptHtmlLoad = jQuery.get("script.html");
 $(window).load(function() {
   scriptHtmlLoad.done(function(html) {
     initEditor();
-    startPlayingScript(html);
+    startPlayingScript(html, Commands);
   });
 });
