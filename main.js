@@ -13,18 +13,6 @@ jQuery.fn.extend({
 Popcorn.plugin("simplecode", function(options, f) {
   return {
     start: function(event, options) {
-      var myIndex = this.data.trackEvents.byStart.indexOf(options);
-      var events = this.data.trackEvents.byStart;
-      var futureEvents = events.slice(myIndex+1);
-      var pastEvents = events.slice(0, myIndex);
-      futureEvents.reverse().forEach(function(event) {
-        if (event.isUndoable && event.executed)
-          event.undo();
-      });
-      pastEvents.forEach(function(event) {
-        if (event.isUndoable && !event.executed)
-          event.onStart();
-      });
       if (options.onStart)
         options.onStart();
     },
@@ -39,9 +27,10 @@ function undoable(options) {
   var onStart = options.onStart;
   var undo = options.undo;
 
+  delete options.onStart;
   options.isUndoable = true;
   options.executed = false;
-  options.onStart = function() {
+  options.execute = function() {
     if (!this.executed) {
       this.executed = true;
       onStart.call(this);
@@ -54,6 +43,22 @@ function undoable(options) {
     }
   };
   return options;
+}
+
+function applyUndoables() {
+  var currentTime = this.media.currentTime;
+  var pastEvents = [];
+  var futureEvents = [];
+  this.data.trackEvents.byStart.forEach(function(event) {
+    if (event.start <= currentTime && event.end <= currentTime &&
+        event.isUndoable && !event.executed)
+      pastEvents.push(event);
+    else if (event.start > currentTime && event.end > currentTime &&
+             event.isUndoable && event.executed)
+      futureEvents.push(event);
+  });
+  futureEvents.reverse().forEach(function(event) { event.undo(); });
+  pastEvents.forEach(function(event) { event.execute(); });
 }
 
 function makePlayer(div) {
@@ -91,7 +96,7 @@ function makePlayer(div) {
     scrub(event);
     return false;
   });
-
+  
   media.addEventListener("timeupdate", function() {
     if (this.currentTime >= this.duration) {
       this.currentTime = this.duration;
@@ -115,7 +120,6 @@ function buildMovieFromScript(html, commands, pop) {
     $(this).data("command").annotate($(this), pop);
   });
   pop.media.readyState = 4;
-  return pop;
 }
 
 function addEditorMovieCommands(commands, editor) {
@@ -297,7 +301,9 @@ $(window).load(function() {
 
     addGeneralMovieCommands(v.commands);
     addEditorMovieCommands(v.commands, v.editor);
-    v.pop = buildMovieFromScript(html, v.commands, makePlayer($("#player")));
+    v.pop = makePlayer($("#player"));
+    v.pop.listen("trackstart", applyUndoables);
+    buildMovieFromScript(html, v.commands, v.pop);
 
     $(window).bind("hashchange", function() {
       var time = parseFloat(window.location.hash.slice(1));
