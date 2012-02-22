@@ -23,17 +23,16 @@ Popcorn.plugin("simplecode", function(options, f) {
   };
 });
 
-function undoable(options) {
-  var onStart = options.onStart;
+Popcorn.plugin("undoable", function(options) {
+  var execute = options.execute;
   var undo = options.undo;
 
-  delete options.onStart;
   options.isUndoable = true;
   options.executed = false;
   options.execute = function() {
     if (!this.executed) {
       this.executed = true;
-      onStart.call(this);
+      execute.call(this);
     }
   };
   options.undo = function() {
@@ -42,8 +41,17 @@ function undoable(options) {
       undo.call(this);
     }
   };
-  return options;
-}
+  return {
+    _setup: function() {
+      if (!this.undoableListenerAdded) {
+        this.undoableListenerAdded = true;
+        this.listen("trackstart", applyUndoables);
+      }
+    },
+    start: function() {},
+    end: function() {}
+  };
+});
 
 function applyUndoables() {
   var currentTime = this.media.currentTime;
@@ -131,10 +139,10 @@ function addEditorMovieCommands(commands, editor) {
       var position = section.attr("data-position");
       var search = section.text();
       var start = section.attrFloat("data-start");
-      pop.simplecode(undoable({
+      pop.undoable({
         start: start,
         end: start + this.duration(section),
-        onStart: function() {
+        execute: function() {
           if (search.length) {
             this._oldCursor = editor.getCursor();
             var cursor = editor.getSearchCursor(search);
@@ -155,7 +163,7 @@ function addEditorMovieCommands(commands, editor) {
         undo: function() {
           editor.setCursor(this._oldCursor);
         }
-      }));
+      });
     }
   };
   
@@ -172,10 +180,10 @@ function addEditorMovieCommands(commands, editor) {
       for (var i = 0; i < characters.length; i++)
         array.push(characters.charAt(i));
       array.forEach(function(character) {
-        pop.simplecode(undoable({
+        pop.undoable({
           start: currentTime,
           end: currentTime + self.DURATION_PER_CHAR,
-          onStart: function() {
+          execute: function() {
             this._oldCursor = editor.getCursor();
             editor.focus();
             editor.replaceRange(character, editor.getCursor());
@@ -183,7 +191,7 @@ function addEditorMovieCommands(commands, editor) {
           undo: function() {
             editor.replaceRange("", this._oldCursor, editor.getCursor());
           }
-        }));
+        });
         currentTime += self.DURATION_PER_CHAR;
       });
     }
@@ -302,7 +310,6 @@ $(window).load(function() {
     addGeneralMovieCommands(v.commands);
     addEditorMovieCommands(v.commands, v.editor);
     v.pop = makePlayer($("#player"));
-    v.pop.listen("trackstart", applyUndoables);
     buildMovieFromScript(html, v.commands, v.pop);
 
     $(window).bind("hashchange", function() {
