@@ -168,8 +168,7 @@ function addGeneralMovieCommands(commands) {
         start: section.attrFloat("data-start"),
         end: end,
         onStart: function() {
-          $("#dialogue").html(section.html());
-          $("#dialogue").addClass('visible');
+          $("#dialogue").html(section.html()).addClass('visible');
         },
         onEnd: function() {
           $("#dialogue").removeClass('visible');
