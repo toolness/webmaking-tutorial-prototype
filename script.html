@@ -27,7 +27,14 @@
   Notice how the text we want to emphasize is now in italics.
 </section>
 <section data-role="spotlight" data-selector="#preview"></section>
-<section data-role="allowediting"></section>
+<section data-role="allowediting" data-predicate="hasUserItalicizedWord">
+  <script>
+  function hasUserItalicizedWord(editor) {
+    var value = editor.getValue();
+    return (value.match(/\<em\>\s*you're\s*\<\/em\>\s*really cool\./i));
+  }
+  </script>
+</section>
 <section data-role="dialogue" data-duration="1">
-  I guess that's all I have to teach you for now. Farewell.
+  Now it's your turn. Can you make the word <em>you're</em> italicized instead of <em>really</em>?
 </section>

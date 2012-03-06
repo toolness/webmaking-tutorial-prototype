@@ -139,3 +139,15 @@ body {
 .notes a:hover {
   background: #f0f0f0;
 }
+
+div.win {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  font-size: 550%;
+  bottom: 0px;
+  left: 0px;
+  padding: 10px;
+  z-index: 10000;
+  display: none;
+}

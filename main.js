@@ -91,6 +91,16 @@ function addEditorMovieCommands(commands, editor) {
     },
     annotate: function(section, pop) {
       var start = section.attrFloat("data-start");
+      var predicate = window[section.attr("data-predicate")];
+      var interval;
+
+      function checkForWin() {
+        if (predicate(editor))
+          $("div.win").fadeIn();
+        else
+          $("div.win").fadeOut();
+      }
+
       pop.undoable({
         start: start,
         end: start + this.duration(section),
@@ -104,6 +114,9 @@ function addEditorMovieCommands(commands, editor) {
             editor.nextCursorActivityIsAutomated = true;
             editor.setCursor(this.lastEditedCursorPos);
           }
+          clearInterval(interval);
+          interval = setInterval(checkForWin, 1000);
+          checkForWin();
         },
         undo: function() {
           editor.setOption("readOnly", true);
@@ -113,6 +126,8 @@ function addEditorMovieCommands(commands, editor) {
           editor.setValue(this.lastValue);
           editor.nextCursorActivityIsAutomated = true;
           editor.setCursor(this.lastCursorPos);
+          clearInterval(interval);
+          $("div.win").hide();
         }
       });
     }
