@@ -85,6 +85,39 @@ function buildMovieFromScript(html, commands, pop) {
 }
 
 function addEditorMovieCommands(commands, editor) {
+  commands.allowediting = {
+    duration: function(section) {
+      return 1.0;
+    },
+    annotate: function(section, pop) {
+      var start = section.attrFloat("data-start");
+      pop.undoable({
+        start: start,
+        end: start + this.duration(section),
+        execute: function() {
+          editor.setOption("readOnly", false);
+          this.lastCursorPos = editor.getCursor();
+          this.lastValue = editor.getValue();
+          if (this.lastEditedValue) {
+            editor.nextCursorActivityIsAutomated = true;
+            editor.setValue(this.lastEditedValue);
+            editor.nextCursorActivityIsAutomated = true;
+            editor.setCursor(this.lastEditedCursorPos);
+          }
+        },
+        undo: function() {
+          editor.setOption("readOnly", true);
+          this.lastEditedCursorPos = editor.getCursor();
+          this.lastEditedValue = editor.getValue();
+          editor.nextCursorActivityIsAutomated = true;
+          editor.setValue(this.lastValue);
+          editor.nextCursorActivityIsAutomated = true;
+          editor.setCursor(this.lastCursorPos);
+        }
+      });
+    }
+  };
+  
   commands.moveto = {
     duration: function(section) {
       return 0.1;
@@ -102,19 +135,24 @@ function addEditorMovieCommands(commands, editor) {
             var cursor = editor.getSearchCursor(search);
             cursor.findNext();
             if (position == "beginning") {
+              editor.nextCursorActivityIsAutomated = true;
               editor.setCursor(cursor.from());
             } else if (position == "end") {
+              editor.nextCursorActivityIsAutomated = true;
               editor.setCursor(cursor.to());
             }
             return;
           }
           if (position == "beginning") {
+            editor.nextCursorActivityIsAutomated = true;
             editor.setCursor(0, 0);
           } else if (position == "end") {
+            editor.nextCursorActivityIsAutomated = true;
             editor.setCursor(9999999999, 999999999999);
           }
         },
         undo: function() {
+          editor.nextCursorActivityIsAutomated = true;
           editor.setCursor(this._oldCursor);
         }
       });
@@ -140,9 +178,11 @@ function addEditorMovieCommands(commands, editor) {
           execute: function() {
             this._oldCursor = editor.getCursor();
             editor.focus();
+            editor.nextCursorActivityIsAutomated = true;
             editor.replaceRange(character, editor.getCursor());
           },
           undo: function() {
+            editor.nextCursorActivityIsAutomated = true;
             editor.replaceRange("", this._oldCursor, editor.getCursor());
           }
         });
@@ -228,6 +268,19 @@ function initEditor() {
     tabMode: "indent",
     lineWrapping: true,
     lineNumbers: true,
+    readOnly: true,
+    onCursorActivity: function() {
+      if (editor.nextCursorActivityIsAutomated) {
+        editor.lastCursorPos = editor.getCursor();
+        editor.nextCursorActivityIsAutomated = false;
+      } else {
+        var canChange = !editor.getOption("readOnly");
+        if (!canChange && editor.lastCursorPos) {
+          editor.nextCursorActivityIsAutomated = true;
+          editor.setCursor(editor.lastCursorPos);
+        }
+      }
+    },
     onChange: function schedulePreviewRefresh() {
       if (nextUpdateIsSilent) {
         nextUpdateIsSilent = false;
