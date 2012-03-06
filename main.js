@@ -115,7 +115,7 @@ function addEditorMovieCommands(commands, editor) {
             editor.setCursor(this.lastEditedCursorPos);
           }
           clearInterval(interval);
-          interval = setInterval(checkForWin, 1000);
+          interval = setInterval(checkForWin, 500);
           checkForWin();
         },
         undo: function() {
