@@ -1,3 +1,14 @@
+// This is a simple Popcorn plugin that can be used to apply/unapply
+// sequence of undoable commands over a period of time. It's useful for
+// automating the use of an application in movies, among other things.
+//
+// At any point in time through the movie, this plugin makes sure that
+// any commands which are supposed to have been applied at that point
+// in time are applied, and that any commands which are not supposed
+// to have been applied yet are undone. This makes it possible for
+// the user to "scrub" to any point in time and see the application
+// in a consistent state.
+
 (function(Popcorn) {
   function applyUndoables() {
     var currentTime = this.media.currentTime;
