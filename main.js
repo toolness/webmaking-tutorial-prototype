@@ -1,15 +1,3 @@
-var scriptHtmlLoad = jQuery.get("script.html");
-var debugVars;
-
-jQuery.fn.extend({
-  attrFloat: function(name, defaultValue) {
-    var number = parseFloat(this.attr(name));
-    if (isNaN(number))
-      return defaultValue;
-    return number;
-  }
-});
-
 Popcorn.plugin("simplecode", function(options, f) {
   return {
     start: function(event, options) {
@@ -23,11 +11,10 @@ Popcorn.plugin("simplecode", function(options, f) {
   };
 });
 
-function makePlayer(div) {
-  var media = new Popcorn.baseplayer();
-  var pop = Popcorn(media);
+function makePlayer(div, pop) {
+  var media = pop.media;
   var scrubber = div.find(".scrubber");
-  
+
   function updatePlayerUI() {
     var percentComplete = (media.currentTime / media.duration) * 100;
     var timestamp = media.currentTime.toFixed(1).toString() + 's';
@@ -66,32 +53,44 @@ function makePlayer(div) {
     }
     updatePlayerUI();
   });
-
-  return pop;
 }
 
-function buildMovieFromScript(html, commands, pop) {
-  var div = $("<div></div>");
-  div.html(html);
-  div.find("section").each(function() {
-    var command = commands[$(this).attr("data-role")];
-    $(this).data("command", command);
-    $(this).attr("data-start", pop.media.duration);
-    pop.media.duration += command.duration($(this));
-  }).each(function() {
-    $(this).data("command").annotate($(this), pop);
-  });
-  pop.media.readyState = 4;
-}
+var MovieScript = {
+  _commands: [],
+  pop: Popcorn(new Popcorn.baseplayer()),
+  plugin: function(name, plugin) {
+    var self = this;
+    this[name] = function() {
+      var command = {
+        start: self.pop.media.duration,
+        plugin: name,
+        index: self._commands.length
+      };
+      jQuery.extend(command, plugin);
+      plugin.initialize.apply(command, arguments);
+      self.pop.media.duration += command.duration;
+      self._commands.push(command);
+      return self;
+    };
+  },
+  end: function() {
+    var self = this;
+    this._commands.forEach(function(command) {
+      command.annotate(self.pop, self._commands);
+    });
+    this.pop.media.readyState = 4;
+  }
+};
 
-function addEditorMovieCommands(commands, editor) {
-  commands.allowediting = {
-    duration: function(section) {
-      return 1.0;
+function addEditorMoviePlugins(editor) {
+  MovieScript.plugin("allowediting", {
+    initialize: function(predicate) {
+      this.predicate = predicate;
+      this.duration = 1.0;
     },
-    annotate: function(section, pop) {
-      var start = section.attrFloat("data-start");
-      var predicate = window[section.attr("data-predicate")];
+    annotate: function(pop) {
+      var start = this.start;
+      var predicate = this.predicate;
       var interval;
 
       function checkForWin() {
@@ -103,7 +102,7 @@ function addEditorMovieCommands(commands, editor) {
 
       pop.undoable({
         start: start,
-        end: start + this.duration(section),
+        end: start + this.duration,
         execute: function() {
           editor.setOption("readOnly", false);
           this.lastCursorPos = editor.getCursor();
@@ -131,19 +130,21 @@ function addEditorMovieCommands(commands, editor) {
         }
       });
     }
-  };
+  });
   
-  commands.moveto = {
-    duration: function(section) {
-      return 0.1;
+  MovieScript.plugin("moveto", {
+    initialize: function(options) {
+      this.position = options.position;
+      this.search = options.search;
+      this.duration = 0.1;
     },
-    annotate: function(section, pop) {
-      var position = section.attr("data-position");
-      var search = section.text();
-      var start = section.attrFloat("data-start");
+    annotate: function(pop) {
+      var position = this.position;
+      var search = this.search;
+      var start = this.start;
       pop.undoable({
         start: start,
-        end: start + this.duration(section),
+        end: start + this.duration,
         execute: function() {
           if (search.length) {
             this._oldCursor = editor.getCursor();
@@ -172,18 +173,19 @@ function addEditorMovieCommands(commands, editor) {
         }
       });
     }
-  };
+  });
   
-  commands.typechars = {
+  MovieScript.plugin("typechars", {
     DURATION_PER_CHAR: 0.4,
-    duration: function(section) {
-      return section.text().length * this.DURATION_PER_CHAR;
+    initialize: function(characters) {
+      this.characters = characters;
+      this.duration = characters.length * this.DURATION_PER_CHAR;
     },
-    annotate: function(section, pop) {
+    annotate: function(pop) {
       var self = this;
-      var characters = section.text();
+      var characters = this.characters;
       var array = [];
-      var currentTime = section.attrFloat("data-start");
+      var currentTime = this.start;
       for (var i = 0; i < characters.length; i++)
         array.push(characters.charAt(i));
       array.forEach(function(character) {
@@ -204,47 +206,55 @@ function addEditorMovieCommands(commands, editor) {
         currentTime += self.DURATION_PER_CHAR;
       });
     }
-  };
+  });
 }
 
-function addGeneralMovieCommands(commands) {
-  commands.dialogue = {
+function addGeneralMoviePlugins() {
+  MovieScript.plugin("dialogue", {
     TRANSITION_TIME: 0.6,
-    duration: function(section) {
-      var duration = section.attrFloat("data-duration", 4);
-      return duration || 0.05;
+    initialize: function(html, duration) {
+      if (typeof(duration) == "undefined")
+        duration = 4;
+      if (duration == 0)
+        duration = 0.05;
+      this.duration = duration;
+      this.html = html;
     },
-    annotate: function(section, pop) {
-      var nextDialogue = section.nextAll('section[data-role="dialogue"]');
+    annotate: function(pop, commands) {
+      var html = this.html;
       var end = pop.media.duration + 1;
-      if (nextDialogue.length)
-        end = nextDialogue.attrFloat("data-start") - this.TRANSITION_TIME;
+      for (var i = this.index+1; i < commands.length; i++)
+        if (commands[i].plugin == "dialogue") {
+          end = commands[i].start - this.TRANSITION_TIME;
+          break;
+        }
       pop.simplecode({
-        start: section.attrFloat("data-start"),
+        start: this.start,
         end: end,
         onStart: function() {
-          $("#dialogue").html(section.html()).addClass('visible');
+          $("#dialogue").html(html).addClass('visible');
         },
         onEnd: function() {
           $("#dialogue").removeClass('visible');
         }
       });
     }
-  };
+  });
   
-  commands.spotlight = {
+  MovieScript.plugin("spotlight", {
     TRANSITION_TIME: 0.25,
-    duration: function(section) {
-      return 3;
+    initialize: function(selector) {
+      this.selector = selector;
+      this.duration = 3;
     },
-    annotate: function(section, pop) {
+    annotate: function(pop) {
       var self = this;
-      var start = section.attrFloat("data-start");
+      var start = this.start;
       pop.simplecode({
         start: start,
-        end: start + this.duration(section) - this.TRANSITION_TIME,
+        end: start + this.duration - this.TRANSITION_TIME,
         onStart: function() {
-          var target = $(section.attr("data-selector"));
+          var target = $(self.selector);
           var bounds = target[0].getBoundingClientRect();
           var spotlight = $('<div class="spotlight"></div>');
           spotlight.css({
@@ -267,7 +277,7 @@ function addGeneralMovieCommands(commands) {
         }
       });
     }
-  };
+  });
 }
 
 function initEditor() {
@@ -321,23 +331,19 @@ function initEditor() {
   return editor;
 }
 
+var debugVars = {
+  editor: initEditor()
+};
+
+addGeneralMoviePlugins();
+addEditorMoviePlugins(debugVars.editor);
+makePlayer($("#player"), MovieScript.pop);
+
 $(window).load(function() {
-  scriptHtmlLoad.done(function(html) {
-    var v = debugVars = {
-      editor: initEditor(),
-      commands: {}
-    };
-
-    addGeneralMovieCommands(v.commands);
-    addEditorMovieCommands(v.commands, v.editor);
-    v.pop = makePlayer($("#player"));
-    buildMovieFromScript(html, v.commands, v.pop);
-
-    $(window).bind("hashchange", function() {
-      var time = parseFloat(window.location.hash.slice(1));
-      if (isNaN(time))
-        time = 0;
-      v.pop.play(time);
-    }).trigger("hashchange");
-  });
+  $(window).bind("hashchange", function() {
+    var time = parseFloat(window.location.hash.slice(1));
+    if (isNaN(time))
+      time = 0;
+    MovieScript.pop.play(time);
+  }).trigger("hashchange");
 });
