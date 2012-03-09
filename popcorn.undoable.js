@@ -1,5 +1,5 @@
 // This is a simple Popcorn plugin that can be used to apply/unapply
-// sequence of undoable commands over a period of time. It's useful for
+// a sequence of undoable commands over a period of time. It's useful for
 // automating the use of an application in movies, among other things.
 //
 // At any point in time through the movie, this plugin makes sure that
