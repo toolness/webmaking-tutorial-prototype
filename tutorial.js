@@ -1,7 +1,20 @@
+// This is a layer on top of Popcorn that makes it easy to create
+// tutorial-style interactive experiences that "script" a Webmaking
+// application's behavior.
+
 var Tutorial = {
+  // Internal list of commands/events for the tutorial movie.
   _commands: [],
+  // The Popcorn instance representing the tutorial movie.
   pop: Popcorn(new Popcorn.baseplayer()),
+  // The CodeMirror editor instance that will be manipulated over
+  // the course of the movie.
   editor: null,
+  // Add a plugin to the tutorial; this is reminiscent of Popcorn's
+  // plugin functionality. Each plugin adds a new kind of scriptable
+  // action or interactive capability to the tutorial movie, such as 
+  // highlighting part of the screen, typing text in the editor,
+  // or prompting the user for input.
   plugin: function(name, plugin) {
     var self = this;
     this[name] = function() {
@@ -17,6 +30,9 @@ var Tutorial = {
       return self;
     };
   },
+  // This should be called after the tutorial has been fully scripted through
+  // the calling of plugin methods. It readies the tutorial movie
+  // for playback.
   ready: function(editor) {
     var self = this;
     this.editor = editor;
@@ -27,6 +43,8 @@ var Tutorial = {
   }
 };
 
+// A "code challenge" plugin that waits until the user has typed
+// valid code into the editor, then displays a congratulatory message.
 Tutorial.plugin("codechallenge", {
   initialize: function(options) {
     this.test = options.test;
@@ -78,6 +96,9 @@ Tutorial.plugin("codechallenge", {
   }
 });
 
+// Moves the cursor of the editor to a given position relative to a
+// search string.
+
 Tutorial.plugin("moveto", {
   initialize: function(options) {
     this.position = options.position;
@@ -121,6 +142,8 @@ Tutorial.plugin("moveto", {
   }
 });
 
+// A plugin to type characters into an editor.
+
 Tutorial.plugin("typechars", {
   DURATION_PER_CHAR: 0.4,
   initialize: function(characters) {
@@ -154,6 +177,9 @@ Tutorial.plugin("typechars", {
   }
 });
 
+// A plugin to display instructional or "dialogue" text to the user in
+// an informational overlay area.
+
 Tutorial.plugin("dialogue", {
   TRANSITION_TIME: 0.6,
   initialize: function(html, duration) {
@@ -184,6 +210,9 @@ Tutorial.plugin("dialogue", {
     });
   }
 });
+
+// A plugin to highlight part of the page, drawing the user's attention
+// to it.
 
 Tutorial.plugin("spotlight", {
   TRANSITION_TIME: 0.25,
