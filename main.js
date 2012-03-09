@@ -55,7 +55,7 @@ function makePlayer(div, pop) {
   });
 }
 
-var MovieScript = {
+var Tutorial = {
   _commands: [],
   pop: Popcorn(new Popcorn.baseplayer()),
   editor: null,
@@ -83,7 +83,7 @@ var MovieScript = {
   }
 };
 
-MovieScript.plugin("allowediting", {
+Tutorial.plugin("allowediting", {
   initialize: function(predicate) {
     this.predicate = predicate;
     this.duration = 1.0;
@@ -132,7 +132,7 @@ MovieScript.plugin("allowediting", {
   }
 });
 
-MovieScript.plugin("moveto", {
+Tutorial.plugin("moveto", {
   initialize: function(options) {
     this.position = options.position;
     this.search = options.search;
@@ -175,7 +175,7 @@ MovieScript.plugin("moveto", {
   }
 });
 
-MovieScript.plugin("typechars", {
+Tutorial.plugin("typechars", {
   DURATION_PER_CHAR: 0.4,
   initialize: function(characters) {
     this.characters = characters;
@@ -208,7 +208,7 @@ MovieScript.plugin("typechars", {
   }
 });
 
-MovieScript.plugin("dialogue", {
+Tutorial.plugin("dialogue", {
   TRANSITION_TIME: 0.6,
   initialize: function(html, duration) {
     if (typeof(duration) == "undefined")
@@ -239,7 +239,7 @@ MovieScript.plugin("dialogue", {
   }
 });
 
-MovieScript.plugin("spotlight", {
+Tutorial.plugin("spotlight", {
   TRANSITION_TIME: 0.25,
   initialize: function(selector) {
     this.selector = selector;
@@ -328,14 +328,14 @@ function initEditor() {
   return editor;
 }
 
-MovieScript.editor = initEditor();
-makePlayer($("#player"), MovieScript.pop);
+Tutorial.editor = initEditor();
+makePlayer($("#player"), Tutorial.pop);
 
 $(window).ready(function() {
   $(window).bind("hashchange", function() {
     var time = parseFloat(window.location.hash.slice(1));
     if (isNaN(time))
       time = 0;
-    MovieScript.pop.play(time);
+    Tutorial.pop.play(time);
   }).trigger("hashchange");
 });
