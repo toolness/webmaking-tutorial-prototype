@@ -14,8 +14,11 @@ Tutorial
   .dialogue("We call that an <code>&lt;em&gt;</code> tag. The <em>em</em> stands for <em>emphasis</em>.")
   .dialogue("Notice how the text we want to emphasize is now in italics.", 0)
   .spotlight("#preview")
-  .allowediting(function hasUserItalicizedWord(editor) {
-    var value = editor.getValue();
-    return (value.match(/\<em\>\s*you're\s*\<\/em\>\s*really cool\./i));
+  .codechallenge({
+    test: function hasUserItalicizedWord(editor) {
+      var value = editor.getValue();
+      return (value.match(/\<em\>\s*you're\s*\<\/em\>\s*really cool\./i));
+    },
+    win: "div.win"
   })
   .dialogue("Now it's your turn. Can you make the word <em>you're</em> italicized instead of <em>really</em>?", 1);

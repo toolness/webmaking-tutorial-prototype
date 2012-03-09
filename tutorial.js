@@ -27,21 +27,23 @@ var Tutorial = {
   }
 };
 
-Tutorial.plugin("allowediting", {
-  initialize: function(predicate) {
-    this.predicate = predicate;
+Tutorial.plugin("codechallenge", {
+  initialize: function(options) {
+    this.test = options.test;
+    this.win = options.win;
     this.duration = 1.0;
   },
   annotate: function(pop, commands, editor) {
     var start = this.start;
-    var predicate = this.predicate;
+    var test = this.test;
+    var winSelector = this.win;
     var interval;
 
     function checkForWin() {
-      if (predicate(editor))
-        $("div.win").fadeIn();
+      if (test(editor))
+        $(winSelector).fadeIn();
       else
-        $("div.win").fadeOut();
+        $(winSelector).fadeOut();
     }
 
     pop.undoable({
@@ -70,7 +72,7 @@ Tutorial.plugin("allowediting", {
         editor.nextCursorActivityIsAutomated = true;
         editor.setCursor(this.lastCursorPos);
         clearInterval(interval);
-        $("div.win").hide();
+        $(winSelector).hide();
       }
     });
   }
