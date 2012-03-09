@@ -18,5 +18,4 @@ Tutorial
     var value = editor.getValue();
     return (value.match(/\<em\>\s*you're\s*\<\/em\>\s*really cool\./i));
   })
-  .dialogue("Now it's your turn. Can you make the word <em>you're</em> italicized instead of <em>really</em>?", 1)
-  .end();
+  .dialogue("Now it's your turn. Can you make the word <em>you're</em> italicized instead of <em>really</em>?", 1);
