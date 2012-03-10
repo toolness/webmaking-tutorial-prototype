@@ -2,29 +2,11 @@
 // tutorial-style interactive experiences that "script" a Webmaking
 // application's behavior.
 
-// Our tutorial player is an almost trivial subclass of Popcorn's baseplayer.
-Popcorn.player("tutorialplayer", {
-  _setup: function() {
-    // By default, the baseplayer won't actually stop the video when
-    // the end has been reached, so we'll have to do that ourselves.
-    var alreadyTryingToPause = false;
-    
-    this.addEventListener("timeupdate", function() {
-      if (!alreadyTryingToPause && this.currentTime >= this.duration) {
-        alreadyTryingToPause = true;
-        this.currentTime = this.duration;
-        this.pause();
-        alreadyTryingToPause = false;
-      }
-    });
-  }
-});
-
 var Tutorial = {
   // Internal list of commands/events for the tutorial movie.
   _commands: [],
   // The Popcorn instance representing the tutorial movie.
-  pop: Popcorn.tutorialplayer(),
+  pop: Popcorn.tutorial("player"),
   // The CodeMirror editor instance that will be manipulated over
   // the course of the movie.
   editor: null,
