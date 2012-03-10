@@ -34,10 +34,6 @@ function makePlayer(div, pop) {
   });
   
   media.addEventListener("timeupdate", function() {
-    if (this.currentTime >= this.duration) {
-      this.currentTime = this.duration;
-      this.pause();
-    }
     updatePlayerUI();
   });
 }
