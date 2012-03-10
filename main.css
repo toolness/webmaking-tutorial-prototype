@@ -112,6 +112,7 @@ body {
 }
 
 #player .timestamp {
+  padding-left: 4px;
   min-width: 40px;
 }
 

@@ -7,7 +7,9 @@ Popcorn.player("tutorial", {
     var alreadyTryingToPause = false;
     var media = this;
     var div = $(media);
-    var scrubber = div.find(".scrubber");
+    var scrubber = $('<div class="scrubber"></div>').appendTo(div);
+    var progress = $('<div class="progress"></div>').appendTo(scrubber);
+    var timestamp = $('<div class="timestamp"></div>').appendTo(div);
     
     this.addEventListener("timeupdate", function() {
       if (!alreadyTryingToPause && this.currentTime >= this.duration) {
@@ -20,11 +22,10 @@ Popcorn.player("tutorial", {
 
     function updatePlayerUI() {
       var percentComplete = (media.currentTime / media.duration) * 100;
-      var timestamp = media.currentTime.toFixed(1).toString() + 's';
-      div.find(".progress").css({
+      progress.css({
         width: percentComplete + "%"
       });
-      div.find(".timestamp").text(timestamp);  
+      timestamp.text(media.currentTime.toFixed(1).toString() + 's');
     }
 
     scrubber.mousedown(function(event) {
