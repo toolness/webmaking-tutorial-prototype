@@ -52,7 +52,6 @@ Tutorial.plugin("codechallenge", {
     this.duration = 1.0;
   },
   annotate: function(pop, commands, editor) {
-    var start = this.start;
     var test = this.test;
     var winSelector = this.win;
     var interval;
@@ -65,8 +64,7 @@ Tutorial.plugin("codechallenge", {
     }
 
     pop.undoable({
-      start: start,
-      end: start + this.duration,
+      start: this.start,
       execute: function() {
         editor.setOption("readOnly", false);
         this.lastCursorPos = editor.getCursor();
@@ -108,10 +106,8 @@ Tutorial.plugin("moveto", {
   annotate: function(pop, commands, editor) {
     var position = this.position;
     var search = this.search;
-    var start = this.start;
     pop.undoable({
-      start: start,
-      end: start + this.duration,
+      start: this.start,
       execute: function() {
         if (search.length) {
           this._oldCursor = editor.getCursor();
@@ -160,7 +156,6 @@ Tutorial.plugin("typechars", {
     array.forEach(function(character) {
       pop.undoable({
         start: currentTime,
-        end: currentTime + self.DURATION_PER_CHAR,
         execute: function() {
           this._oldCursor = editor.getCursor();
           editor.focus();
