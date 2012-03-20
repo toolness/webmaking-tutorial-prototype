@@ -50,7 +50,10 @@ function initEditor() {
 }
 
 $(window).ready(function() {
-  tutorial.ready(initEditor());
+  tutorial.ready({
+    editor: initEditor(),
+    instructions: $("#dialogue")
+  });
   
   $(window).bind("hashchange", function() {
     var time = parseFloat(window.location.hash.slice(1));

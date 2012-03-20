@@ -40,11 +40,13 @@ var Tutorial = (function() {
     // This should be called after the tutorial has been fully scripted 
     // through the calling of plugin methods. It readies the tutorial movie
     // for playback.
-    ready: function(editor) {
+    ready: function(settings) {
       var self = this;
-      this.editor = editor;
+      this.editor = settings.editor;
+      this.instructions = settings.instructions;
       this._commands.forEach(function(command) {
-        command.annotate(self.pop, self._commands, self.editor);
+        command.annotate(self.pop, self._commands, self.editor,
+                         self.instructions);
       });
       this.pop.media.readyState = 4;
     }
@@ -184,10 +186,10 @@ Tutorial.plugin("typechars", {
   }
 });
 
-// A plugin to display instructional or "dialogue" text to the user in
-// an informational overlay area.
+// A plugin to display instructional text to the user in an informational
+// overlay area.
 
-Tutorial.plugin("dialogue", {
+Tutorial.plugin("instruct", {
   TRANSITION_TIME: 0.6,
   initialize: function(html, duration) {
     if (typeof(duration) == "undefined")
@@ -197,11 +199,11 @@ Tutorial.plugin("dialogue", {
     this.duration = duration;
     this.html = html;
   },
-  annotate: function(pop, commands) {
+  annotate: function(pop, commands, editor, instructions) {
     var html = this.html;
     var end = pop.media.duration + 1;
     for (var i = this.index+1; i < commands.length; i++)
-      if (commands[i].plugin == "dialogue") {
+      if (commands[i].plugin == "instruct") {
         end = commands[i].start - this.TRANSITION_TIME;
         break;
       }
@@ -209,10 +211,10 @@ Tutorial.plugin("dialogue", {
       start: this.start,
       end: end,
       onStart: function() {
-        $("#dialogue").html(html).addClass('visible');
+        $(instructions).html(html).addClass('visible');
       },
       onEnd: function() {
-        $("#dialogue").removeClass('visible');
+        $(instructions).removeClass('visible');
       }
     });
   }
