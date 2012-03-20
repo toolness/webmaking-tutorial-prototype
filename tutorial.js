@@ -100,7 +100,7 @@ Tutorial.plugin("codechallenge", {
 Tutorial.plugin("moveto", {
   initialize: function(options) {
     this.position = options.position;
-    this.search = options.search;
+    this.search = options.search || "";
     this.duration = 0.1;
   },
   annotate: function(pop, commands, editor) {
