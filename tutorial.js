@@ -2,46 +2,58 @@
 // tutorial-style interactive experiences that "script" a Webmaking
 // application's behavior.
 
-var Tutorial = {
-  // Internal list of commands/events for the tutorial movie.
-  _commands: [],
-  // The Popcorn instance representing the tutorial movie.
-  pop: Popcorn.tutorial("player"),
-  // The CodeMirror editor instance that will be manipulated over
-  // the course of the movie.
-  editor: null,
+var Tutorial = (function() {
+  var Tutorial = function() {
+    return new Tutorial.prototype.init();
+  };
+
   // Add a plugin to the tutorial; this is reminiscent of Popcorn's
   // plugin functionality. Each plugin adds a new kind of scriptable
   // action or interactive capability to the tutorial movie, such as 
   // highlighting part of the screen, typing text in the editor,
   // or prompting the user for input.
-  plugin: function(name, plugin) {
-    var self = this;
-    this[name] = function() {
+  Tutorial.plugin = function(name, plugin) {
+    this.prototype[name] = function() {
       var command = {
-        start: self.pop.media.duration,
+        start: this.pop.media.duration,
         plugin: name,
-        index: self._commands.length
+        index: this._commands.length
       };
       jQuery.extend(command, plugin);
       plugin.initialize.apply(command, arguments);
-      self.pop.media.duration += command.duration;
-      self._commands.push(command);
-      return self;
+      this.pop.media.duration += command.duration;
+      this._commands.push(command);
+      return this;
     };
-  },
-  // This should be called after the tutorial has been fully scripted through
-  // the calling of plugin methods. It readies the tutorial movie
-  // for playback.
-  ready: function(editor) {
-    var self = this;
-    this.editor = editor;
-    this._commands.forEach(function(command) {
-      command.annotate(self.pop, self._commands, self.editor);
-    });
-    this.pop.media.readyState = 4;
-  }
-};
+  };
+
+  Tutorial.prototype = {
+    init: function() {
+      // Internal list of commands/events for the tutorial movie.
+      this._commands = [];
+      // The Popcorn instance representing the tutorial movie.
+      this.pop = Popcorn.tutorial("player");
+      // The CodeMirror editor instance that will be manipulated over
+      // the course of the movie.
+      this.editor = null;
+    },
+    // This should be called after the tutorial has been fully scripted 
+    // through the calling of plugin methods. It readies the tutorial movie
+    // for playback.
+    ready: function(editor) {
+      var self = this;
+      this.editor = editor;
+      this._commands.forEach(function(command) {
+        command.annotate(self.pop, self._commands, self.editor);
+      });
+      this.pop.media.readyState = 4;
+    }
+  };
+  
+  Tutorial.prototype.init.prototype = Tutorial.prototype;
+  
+  return Tutorial;
+})();
 
 // A "code challenge" plugin that waits until the user has typed
 // valid code into the editor, then displays a congratulatory message.

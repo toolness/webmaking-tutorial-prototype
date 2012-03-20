@@ -1,4 +1,4 @@
-Tutorial
+var tutorial = Tutorial()
   .dialogue("Hi! I am Mr. Love Bomb and will teach you how to be a webmaker now.", 0)
   .typechars("you're really cool.")
   .dialogue("Check it out, this is HTML source code&mdash;the language of the Web.", 0)
