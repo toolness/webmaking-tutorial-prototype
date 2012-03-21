@@ -1,10 +1,10 @@
-function initEditor() {
+function TwoPanedEditor(settings) {
   var nextUpdateIsSilent = false;
   var nextUpdateIsInstant = false;
   var DELAY_MS = 300;
   var delay = null;
   var editor = CodeMirror(function(element) {
-    $("#editor").append(element);
+    $(settings.editor).append(element);
   }, {
     mode: "text/html",
     theme: "jsbin",
@@ -39,7 +39,7 @@ function initEditor() {
   });
 
   function updatePreview() {
-    var previewDocument = $("#preview").contents()[0];
+    var previewDocument = $(settings.preview).contents()[0];
     previewDocument.open();
     previewDocument.write(editor.getValue());
     previewDocument.close();
@@ -51,7 +51,10 @@ function initEditor() {
 
 $(window).ready(function() {
   tutorial.ready({
-    editor: initEditor(),
+    editor: TwoPanedEditor({
+      editor: $("#editor"),
+      preview: $("#preview")
+    }),
     instructions: $("#dialogue")
   });
   
