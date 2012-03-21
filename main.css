@@ -107,6 +107,13 @@ body {
   z-index: 20000;
 }
 
+#player svg.button {
+  width: 14px;
+  height: 14px;
+  vertical-align: bottom;
+  fill: white;
+}
+
 #player .scrubber {
   width: 100px;
 }
