@@ -3,8 +3,8 @@
 // application's behavior.
 
 var Tutorial = (function() {
-  var Tutorial = function() {
-    return new Tutorial.prototype.init();
+  var Tutorial = function(entity) {
+    return new Tutorial.prototype.init(entity);
   };
 
   // Add a plugin to the tutorial; this is reminiscent of Popcorn's
@@ -28,11 +28,11 @@ var Tutorial = (function() {
   };
 
   Tutorial.prototype = {
-    init: function() {
+    init: function(entity) {
       // Internal list of commands/events for the tutorial movie.
       this._commands = [];
       // The Popcorn instance representing the tutorial movie.
-      this.pop = Popcorn.tutorial("player");
+      this.pop = Popcorn.tutorial(entity);
       // The CodeMirror editor instance that will be manipulated over
       // the course of the movie.
       this.editor = null;
