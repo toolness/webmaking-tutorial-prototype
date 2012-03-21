@@ -3,8 +3,8 @@
 // application's behavior.
 
 var Tutorial = (function() {
-  var Tutorial = function(entity) {
-    return new Tutorial.prototype.init(entity);
+  var Tutorial = function(settings) {
+    return new Tutorial.prototype.init(settings);
   };
 
   // Add a plugin to the tutorial; this is reminiscent of Popcorn's
@@ -28,27 +28,30 @@ var Tutorial = (function() {
   };
 
   Tutorial.prototype = {
-    init: function(entity) {
+    init: function(settings) {
       // Internal list of commands/events for the tutorial movie.
       this._commands = [];
       // The Popcorn instance representing the tutorial movie.
-      this.pop = Popcorn.tutorial(entity);
+      this.pop = Popcorn.tutorial($(settings.controls)[0]);
       // The CodeMirror editor instance that will be manipulated over
       // the course of the movie.
-      this.editor = null;
+      this.editor = TwoPanedEditor({
+        editor: $(settings.editor),
+        preview: $(settings.preview)
+      });
+      this.instructions = $(settings.instructions);
     },
     // This should be called after the tutorial has been fully scripted 
     // through the calling of plugin methods. It readies the tutorial movie
     // for playback.
-    ready: function(settings) {
+    end: function() {
       var self = this;
-      this.editor = settings.editor;
-      this.instructions = settings.instructions;
       this._commands.forEach(function(command) {
         command.annotate(self.pop, self._commands, self.editor,
                          self.instructions);
       });
       this.pop.media.readyState = 4;
+      return this;
     }
   };
   

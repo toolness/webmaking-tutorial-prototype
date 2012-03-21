@@ -1,4 +1,9 @@
-var tutorial = Tutorial("player")
+var tutorial = Tutorial({
+    controls: "#player",
+    editor: "#editor",
+    preview: "#preview",
+    instructions: "#dialogue"
+  })
   .instruct("Hi! I am Mr. Love Bomb and will teach you how to be a webmaker now.", 0)
   .typechars("you're really cool.")
   .instruct("Check it out, this is HTML source code&mdash;the language of the Web.", 0)
@@ -21,4 +26,5 @@ var tutorial = Tutorial("player")
       return (value.match(/\<em\>\s*you're\s*\<\/em\>\s*really cool\./i));
     },
     win: "div.win"
-  });
+  })
+  .end();
